@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FBF6EA">
+<title>My Pay This Week</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF6EA;        /* soft cream, easier than pure white */
+    --card: #FFFDF7;
+    --text: #1C1C1C;
+    --muted: #4A4A4A;
+    --line: #8A8170;
+    --blue: #0B4F8A;
+    --blue-dark: #083A66;
+    --green: #1E5E2E;
+    --red: #9B1C1C;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Atkinson Hyperlegible", Verdana, Arial, Helvetica, sans-serif;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    word-spacing: 0.08em;
+  }
+  main { max-width: 520px; margin: 0 auto; padding: 16px 16px 40px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 4px 0 4px; }
+  h2 { font-size: 24px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  .note { color: var(--muted); font-size: 18px; }
+
+  .card {
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    margin: 0 0 16px;
+  }
+
+  label { display: block; font-weight: 700; font-size: 20px; }
+  input {
+    font: inherit;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    background: #fff;
+    width: 100%;
+    min-height: 60px;
+    padding: 6px 12px;
+    border: 3px solid var(--line);
+    border-radius: 10px;
+  }
+  input:focus { outline: 4px solid var(--blue); outline-offset: 2px; border-color: var(--blue); }
+  input.bad { border-color: var(--red); }
+
+  .rate-row { display: flex; align-items: center; gap: 8px; }
+  .pound { font-size: 32px; font-weight: 700; }
+  .rate-row input { max-width: 200px; }
+
+  .day-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .day-name { font-size: 26px; font-weight: 700; margin: 0; }
+  .day-pay { font-size: 26px; font-weight: 700; color: var(--green); white-space: nowrap; }
+  .time-row { display: flex; gap: 12px; margin-top: 8px; }
+  .time-row > div { flex: 1; }
+  .split { font-size: 18px; color: var(--muted); margin: 8px 0 0; white-space: pre-line; }
+  .error { color: var(--red); font-weight: 700; font-size: 18px; margin: 6px 0 0; }
+
+  button {
+    font: inherit;
+    font-weight: 700;
+    min-height: 56px;
+    padding: 8px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:focus-visible { outline: 4px solid var(--blue); outline-offset: 2px; }
+  .btn-clear-day {
+    margin-top: 10px;
+    width: 100%;
+    background: #fff;
+    color: var(--text);
+    border: 3px solid var(--line);
+  }
+  .btn-main {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: 3px solid var(--blue-dark);
+    font-size: 22px;
+  }
+  .btn-danger {
+    width: 100%;
+    background: #fff;
+    color: var(--red);
+    border: 3px solid var(--red);
+  }
+
+  /* ---------- Summary: must fit on one phone screen ---------- */
+  #summary {
+    background: var(--card);
+    border: 3px solid var(--text);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 0 0 16px;
+    scroll-margin-top: 8px;
+  }
+  #summary h2 { font-size: 24px; margin: 0 0 2px; }
+  #summary .rate-line { font-size: 18px; line-height: 1.3; margin: 0 0 6px; }
+  #summary table { width: 100%; border-collapse: collapse; font-size: 20px; letter-spacing: 0; }
+  #summary th, #summary td { white-space: nowrap; padding: 4px 2px; border-bottom: 1px solid #CFC7B5; text-align: left; }
+  #summary th { font-size: 16px; color: var(--muted); font-weight: 700; }
+  #summary td.money, #summary th.money { text-align: right; white-space: nowrap; }
+  #summary td.money { font-weight: 700; }
+  #summary tr.total td { border-bottom: none; border-top: 3px solid var(--text); font-size: 22px; font-weight: 700; padding-top: 8px; }
+  #summary .day-cell { font-weight: 700; }
+
+  @media (max-width: 370px) {
+    main { padding-left: 12px; padding-right: 12px; }
+    #summary { padding: 10px 10px; }
+    #summary table { font-size: 17px; }
+    #summary tr.total td { font-size: 19px; }
+  }
+
+  .actions { display: grid; gap: 12px; margin-top: 8px; }
+
+  /* Confirm box */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+    z-index: 10;
+  }
+  .overlay.open { display: flex; }
+  .dialog {
+    background: var(--card);
+    border: 3px solid var(--text);
+    border-radius: 14px;
+    padding: 20px;
+    max-width: 420px; width: 100%;
+  }
+  .dialog p { font-size: 22px; font-weight: 700; }
+  .dialog .actions { margin-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>My Pay This Week</h1>
+  <p class="note">Type your hours for each day. It saves by itself.</p>
+
+  <section class="card" aria-labelledby="rate-label">
+    <label id="rate-label" for="rate">Pay per hour</label>
+    <div class="rate-row">
+      <span class="pound" aria-hidden="true">£</span>
+      <input id="rate" type="text" inputmode="decimal" autocomplete="off" aria-describedby="rate-help">
+    </div>
+    <p id="rate-help" class="note" style="margin:8px 0 0">After 10 hours in a day, you get 1.5 times this.</p>
+    <p id="rate-error" class="error" hidden>Please type a number, like 20 or 20.50</p>
+  </section>
+
+  <button class="btn-main" type="button" id="go-summary" style="margin-bottom:16px">See summary</button>
+
+  <div id="days"></div>
+
+  <section id="summary" aria-labelledby="summary-title">
+    <h2 id="summary-title">Summary</h2>
+    <p class="rate-line" id="sum-rate"></p>
+    <table>
+      <thead><tr><th>Day</th><th>Worked</th><th class="money">Pay</th></tr></thead>
+      <tbody id="sum-body"></tbody>
+    </table>
+  </section>
+
+  <div class="actions">
+    <button class="btn-main" type="button" id="go-top">Back to top</button>
+    <button class="btn-danger" type="button" id="clear-week">Clear whole week</button>
+  </div>
+</main>
+
+<div class="overlay" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
+  <div class="dialog">
+    <p id="confirm-text">Clear all hours for the whole week?</p>
+    <p class="note" style="font-size:18px;font-weight:400">Your pay per hour will be kept.</p>
+    <div class="actions">
+      <button class="btn-danger" type="button" id="confirm-yes">Yes, clear the week</button>
+      <button class="btn-main" type="button" id="confirm-no">No, go back</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var KEY = "paybyminute-v1";
+  var NORMAL_MINUTES = 10 * 60;   // first 10 hours each day at the normal rate
+  var OVERTIME = 1.5;             // everything after that at 1.5 times
+
+  // ---------- Saved data ----------
+  var state = { rate: "", days: {} };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY));
+    if (saved && typeof saved === "object") {
+      state.rate = typeof saved.rate === "string" ? saved.rate : "";
+      state.days = saved.days && typeof saved.days === "object" ? saved.days : {};
+    }
+  } catch (e) { /* nothing saved yet, or storage blocked */ }
+  DAYS.forEach(function (d) {
+    if (!state.days[d]) state.days[d] = { h: "", m: "" };
+  });
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // ---------- Maths ----------
+  function parseRate(text) {
+    var t = String(text).replace(/[£,\s]/g, "");
+    if (t === "") return 0;
+    if (!/^\d*\.?\d*$/.test(t) || t === ".") return NaN;
+    return parseFloat(t);
+  }
+  function parseWhole(text) {
+    var t = String(text).trim();
+    if (t === "") return 0;
+    if (!/^\d+$/.test(t)) return NaN;
+    return parseInt(t, 10);
+  }
+  // Pay in pence for a number of minutes, worked to the exact minute.
+  function payPence(rate, minutes) {
+    var normal = Math.min(minutes, NORMAL_MINUTES);
+    var extra = Math.max(0, minutes - NORMAL_MINUTES);
+    var pounds = rate * normal / 60 + rate * OVERTIME * extra / 60;
+    return Math.round(pounds * 100);
+  }
+  function money(pence) {
+    var p = Math.round(pence);
+    var pounds = Math.floor(p / 100);
+    var rest = String(p % 100);
+    if (rest.length < 2) rest = "0" + rest;
+    return "£" + pounds.toLocaleString("en-GB") + "." + rest;
+  }
+  function timeWords(minutes) {
+    var h = Math.floor(minutes / 60), m = minutes % 60;
+    return h + " hr" + (h === 1 ? "" : "s") + " " + m + " min" + (m === 1 ? "" : "s");
+  }
+
+  function shortTime(minutes) {
+    return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m";
+  }
+
+  // ---------- Build the day cards ----------
+  var daysBox = document.getElementById("days");
+  var refs = {};
+  DAYS.forEach(function (day) {
+    var id = day.toLowerCase();
+    var card = document.createElement("section");
+    card.className = "card";
+    card.setAttribute("aria-labelledby", id + "-name");
+    card.innerHTML =
+      '<div class="day-head">' +
+        '<h2 class="day-name" id="' + id + '-name">' + day + '</h2>' +
+        '<span class="day-pay" id="' + id + '-pay" aria-live="polite"></span>' +
+      '</div>' +
+      '<div class="time-row">' +
+        '<div><label for="' + id + '-h">Hours</label>' +
+        '<input id="' + id + '-h" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off"></div>' +
+        '<div><label for="' + id + '-m">Minutes</label>' +
+        '<input id="' + id + '-m" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off"></div>' +
+      '</div>' +
+      '<p class="split" id="' + id + '-split"></p>' +
+      '<p class="error" id="' + id + '-error" hidden></p>' +
+      '<button type="button" class="btn-clear-day" id="' + id + '-clear">Clear ' + day + '</button>';
+    daysBox.appendChild(card);
+
+    var r = {
+      h: card.querySelector("#" + id + "-h"),
+      m: card.querySelector("#" + id + "-m"),
+      pay: card.querySelector("#" + id + "-pay"),
+      split: card.querySelector("#" + id + "-split"),
+      error: card.querySelector("#" + id + "-error")
+    };
+    refs[day] = r;
+    r.h.value = state.days[day].h;
+    r.m.value = state.days[day].m;
+
+    function onInput() {
+      state.days[day].h = r.h.value.trim();
+      state.days[day].m = r.m.value.trim();
+      save();
+      render();
+    }
+    r.h.addEventListener("input", onInput);
+    r.m.addEventListener("input", onInput);
+    card.querySelector("#" + id + "-clear").addEventListener("click", function () {
+      r.h.value = ""; r.m.value = "";
+      onInput();
+    });
+  });
+
+  var rateInput = document.getElementById("rate");
+  rateInput.value = state.rate;
+  rateInput.addEventListener("input", function () {
+    state.rate = rateInput.value.trim();
+    save();
+    render();
+  });
+
+  // ---------- Show everything ----------
+  function render() {
+    var rate = parseRate(state.rate);
+    var rateOk = !isNaN(rate);
+    rateInput.classList.toggle("bad", !rateOk);
+    document.getElementById("rate-error").hidden = rateOk;
+    if (!rateOk) rate = 0;
+
+    var rows = "";
+    var weekPence = 0, weekMinutes = 0;
+
+    DAYS.forEach(function (day) {
+      var r = refs[day];
+      var h = parseWhole(state.days[day].h);
+      var m = parseWhole(state.days[day].m);
+      var msg = "";
+      if (isNaN(h) || isNaN(m)) msg = "Please use whole numbers only.";
+      else if (m > 59) msg = "Minutes must be 59 or less.";
+      else if (h * 60 + m > 24 * 60) msg = "That is more than 24 hours.";
+      r.h.classList.toggle("bad", isNaN(h) || msg === "That is more than 24 hours.");
+      r.m.classList.toggle("bad", isNaN(m) || m > 59);
+      r.error.textContent = msg;
+      r.error.hidden = !msg;
+
+      var empty = state.days[day].h === "" && state.days[day].m === "";
+      var minutes = msg ? 0 : h * 60 + m;
+      var pence = payPence(rate, minutes);
+
+      if (msg || empty) {
+        r.pay.textContent = "";
+        r.split.textContent = "";
+      } else {
+        r.pay.textContent = money(pence);
+        if (minutes > NORMAL_MINUTES) {
+          var extra = minutes - NORMAL_MINUTES;
+          r.split.textContent =
+            "First 10 hrs: " + money(payPence(rate, NORMAL_MINUTES)) +
+            "\nExtra " + timeWords(extra) + ": " +
+            money(pence - payPence(rate, NORMAL_MINUTES));
+        } else {
+          r.split.textContent = "All normal rate";
+        }
+      }
+
+      weekPence += pence;
+      weekMinutes += minutes;
+      rows += "<tr><td class='day-cell'>" + day.slice(0, 3) + "</td>" +
+              "<td>" + (msg || empty ? "–" : shortTime(minutes)) + "</td>" +
+              "<td class='money'>" + (msg || empty ? "–" : money(pence)) + "</td></tr>";
+    });
+
+    rows += "<tr class='total'><td>Week</td><td>" + shortTime(weekMinutes) + "</td>" +
+            "<td class='money'>" + money(weekPence) + "</td></tr>";
+    document.getElementById("sum-body").innerHTML = rows;
+    document.getElementById("sum-rate").textContent =
+      rate ? money(Math.round(rate * 100)) + " an hour, " + money(Math.round(rate * OVERTIME * 100)) + " after 10 hrs"
+           : "Pay per hour not set yet";
+  }
+
+  // ---------- Buttons ----------
+  document.getElementById("go-summary").addEventListener("click", function () {
+    document.getElementById("summary").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.getElementById("go-top").addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  var overlay = document.getElementById("confirm");
+  document.getElementById("clear-week").addEventListener("click", function () {
+    overlay.classList.add("open");
+    document.getElementById("confirm-no").focus();
+  });
+  document.getElementById("confirm-no").addEventListener("click", function () {
+    overlay.classList.remove("open");
+  });
+  document.getElementById("confirm-yes").addEventListener("click", function () {
+    DAYS.forEach(function (day) {
+      state.days[day] = { h: "", m: "" };
+      refs[day].h.value = ""; refs[day].m.value = "";
+    });
+    save();
+    render();
+    overlay.classList.remove("open");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // expose maths for testing
+  window.PayByMinute = { payPence: payPence, money: money };
+
+  render();
+})();
+</script>
+</body>
+</html>
