@@ -169,8 +169,6 @@
     <p id="rate-error" class="error" hidden>Please type a number, like 20 or 20.50</p>
   </section>
 
-  <button class="btn-main" type="button" id="go-summary" style="margin-bottom:16px">See summary</button>
-
   <div id="days"></div>
 
   <section id="summary" aria-labelledby="summary-title">
@@ -378,9 +376,6 @@
   }
 
   // ---------- Buttons ----------
-  document.getElementById("go-summary").addEventListener("click", function () {
-    document.getElementById("summary").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
   document.getElementById("go-top").addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
