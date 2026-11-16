@@ -165,7 +165,7 @@
       <span class="pound" aria-hidden="true">£</span>
       <input id="rate" type="text" inputmode="decimal" autocomplete="off" aria-describedby="rate-help">
     </div>
-    <p id="rate-help" class="note" style="margin:8px 0 0">After 10.5 hours in a day, you get 1.5 times this.</p>
+    <p id="rate-help" class="note" style="margin:8px 0 0">You are paid for up to 10 hours a day. The next 30 minutes are unpaid. After 10.5 hours, you get 1.5 times this.</p>
     <p id="rate-error" class="error" hidden>Please type a number, like 20 or 20.50</p>
   </section>
 
@@ -203,8 +203,9 @@
 
   var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   var KEY = "paybyminute-v1";
-  var NORMAL_MINUTES = 10.5 * 60; // first 10.5 hours (10 hrs 30 mins) each day at the normal rate
-  var OVERTIME = 1.5;             // everything after that at 1.5 times
+  var NORMAL_MINUTES = 10 * 60;     // first 10 hours each day at the normal rate
+  var OVERTIME_START = 10.5 * 60;   // 10 hrs to 10 hrs 30 mins is unpaid
+  var OVERTIME = 1.5;               // everything after 10 hrs 30 mins at 1.5 times
 
   // ---------- Saved data ----------
   var state = { rate: "", days: {} };
@@ -239,7 +240,7 @@
   // Pay in pence for a number of minutes, worked to the exact minute.
   function payPence(rate, minutes) {
     var normal = Math.min(minutes, NORMAL_MINUTES);
-    var extra = Math.max(0, minutes - NORMAL_MINUTES);
+    var extra = Math.max(0, minutes - OVERTIME_START);
     var pounds = rate * normal / 60 + rate * OVERTIME * extra / 60;
     return Math.round(pounds * 100);
   }
@@ -350,11 +351,13 @@
       } else {
         r.pay.textContent = money(pence);
         if (minutes > NORMAL_MINUTES) {
-          var extra = minutes - NORMAL_MINUTES;
+          var unpaid = Math.min(minutes, OVERTIME_START) - NORMAL_MINUTES;
+          var extra = Math.max(0, minutes - OVERTIME_START);
           r.split.textContent =
-            "First 10.5 hrs: " + money(payPence(rate, NORMAL_MINUTES)) +
-            "\nExtra " + timeWords(extra) + ": " +
-            money(pence - payPence(rate, NORMAL_MINUTES));
+            "First 10 hrs: " + money(payPence(rate, NORMAL_MINUTES)) +
+            "\nUnpaid " + timeWords(unpaid) + ": " + money(0) +
+            (extra ? "\nExtra " + timeWords(extra) + ": " +
+              money(pence - payPence(rate, NORMAL_MINUTES)) : "");
         } else {
           r.split.textContent = "All normal rate";
         }
@@ -371,7 +374,7 @@
             "<td class='money'>" + money(weekPence) + "</td></tr>";
     document.getElementById("sum-body").innerHTML = rows;
     document.getElementById("sum-rate").textContent =
-      rate ? money(Math.round(rate * 100)) + " an hour, " + money(Math.round(rate * OVERTIME * 100)) + " after 10.5 hrs"
+      rate ? money(Math.round(rate * 100)) + " an hour, " + money(Math.round(rate * OVERTIME * 100)) + " after 10.5 hrs (10–10.5 hrs unpaid)"
            : "Pay per hour not set yet";
   }
 
